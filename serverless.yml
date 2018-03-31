@@ -1,0 +1,292 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: skipper
+custom:  
+  cognitoPoolArn: "arn:aws:cognito-idp:us-east-2:816533316746:userpool/us-east-2_HrTDyYrmP"
+  cognitoAuthorizer:
+    arn: ${self:custom.cognitoPoolArn}
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: nodejs6.10  
+  stage: dev
+  region: us-east-2
+  environment:
+    AGENCY_TABLE: "agency-${opt:stage, self:provider.stage}"
+    AGENCY_PHONE_INFO_TABLE: "agency-phoneinfo-${opt:stage, self:provider.stage}"
+    AGENCY_CONTACT_DETAIL_TABLE: "agency-contact-details-${opt:stage, self:provider.stage}"
+    USER_POOL_ID: "us-east-2_HrTDyYrmP"
+    CLIENT_ID: "63a44i3jscqsqklv33idkcb2c4"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "*"
+
+functions:
+  greetUsers:
+    handler: lambda/user.hello
+    memorySize: 128
+    description: Simple test hello
+    events:
+      - http:
+          path: /hello
+          method: get
+          cors: true
+          authorizer: ${self:custom.cognitoAuthorizer} 
+  addNewAgency:
+    handler: lambda/agency.register
+    memorySize: 128
+    description: Allows an Admin to add an Agency
+    events:
+      - http:
+          path: /admin/agency
+          method: post
+          cors: true
+          authorizer: ${self:custom.cognitoAuthorizer}        
+  # getAgency:
+  #   handler: lambda/agency.get
+  #   memorySize: 128
+  #   description: Allows an Admin to get an Agency with contact details
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}
+  #         method: get
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}               
+  # getAllagencies:
+  #   handler: lambda/agency.list
+  #   memorySize: 128
+  #   description: Allows an Admin to get a list of all registered Agencies
+  #   events:
+  #     - http:
+  #         path: /admin/agencies
+  #         method: get
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # updateAgency:
+  #   handler: lambda/agency.update
+  #   memorySize: 128
+  #   description: Allows an Admin to update an Agency record
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}
+  #         method: put
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # addContact:
+  #   handler: lambda/agency.addcontact
+  #   memorySize: 128
+  #   description: Allows an Admin to add an Agency contact
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}/contact
+  #         method: post
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # updateContact:
+  #   handler: lambda/agency.updatecontact
+  #   memorySize: 128
+  #   description: Allows an Admin to update an Agency contact
+  #   events:
+  #     - http:
+  #         path: /admin/contact/{id}
+  #         method: put
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}  
+  # listAllcontacts:
+  #   handler: lambda/agency.listcontacts
+  #   memorySize: 128
+  #   description: Allows an Admin to retrieve a list of all contacts for a particular agency
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}/contacts
+  #         method: put
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # deleteAgency:
+  #   handler: lambda/agency.remove
+  #   memorySize: 128
+  #   description: Allows an Admin to delete an Agency record
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}
+  #         method: delete
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}  
+  # deleteAllagencies:
+  #   handler: lambda/agency.removeall
+  #   memorySize: 128
+  #   description: Allows an Admin to delete all Agency records along with contact details
+  #   events:
+  #     - http:
+  #         path: /admin/agencies
+  #         method: delete
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # deleteAllAgencyContacts:
+  #   handler: lambda/agency.removeallcontacts
+  #   memorySize: 128
+  #   description: Allows an Admin to delete all contact details of a particular agency
+  #   events:
+  #     - http:
+  #         path: /admin/agency/{id}/contacts
+  #         method: delete
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+  # deleteContact:
+  #   handler: lambda/agency.removecontact
+  #   memorySize: 128
+  #   description: Allows an Admin to delete a single contact of a particular agency
+  #   events:
+  #     - http:
+  #         path: /admin/agency/contact/{id}
+  #         method: delete
+  #         cors: true
+  #         authorizer: ${self:custom.cognitoAuthorizer}
+resources:
+  Resources:
+    AgencyDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'      
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "agency_id"
+            AttributeType: "S"
+        KeySchema:
+          -
+            AttributeName: "agency_id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        StreamSpecification:
+          StreamViewType: "NEW_IMAGE"
+        TableName: ${self:provider.environment.AGENCY_TABLE}
+    AgencyDetailDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:provider.environment.AGENCY_CONTACT_DETAIL_TABLE}
+    AgencyPhoneNumberDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "contact_number"
+            AttributeType: "S"
+        KeySchema:
+          -
+            AttributeName: "contact_number"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:provider.environment.AGENCY_PHONE_INFO_TABLE}
+
+# you can add statements to the Lambda function's IAM Role here
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:ListBucket"
+#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:PutObject"
+#      Resource:
+#        Fn::Join:
+#          - ""
+#          - - "arn:aws:s3:::"
+#            - "Ref" : "ServerlessDeploymentBucket"
+#            - "/*"
+
+# you can define service wide environment variables here
+#  environment:
+#    variable1: value1
+
+# you can add packaging information here
+#package:
+#  include:
+#    - include-me.js
+#    - include-me-dir/**
+#  exclude:
+#    - exclude-me.js
+#    - exclude-me-dir/**
+
+# functions:
+#   hello:
+#     handler: handler.hello
+
+#    The following are a few example events you can configure
+#    NOTE: Please make sure to change your handler code to work with those events
+#    Check the event documentation for details
+#    events:
+#      - http:
+#          path: users/create
+#          method: get
+#      - s3: ${env:BUCKET}
+#      - schedule: rate(10 minutes)
+#      - sns: greeter-topic
+#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
+#      - alexaSkill
+#      - alexaSmartHome: amzn1.ask.skill.xx-xx-xx-xx
+#      - iot:
+#          sql: "SELECT * FROM 'some_topic'"
+#      - cloudwatchEvent:
+#          event:
+#            source:
+#              - "aws.ec2"
+#            detail-type:
+#              - "EC2 Instance State-change Notification"
+#            detail:
+#              state:
+#                - pending
+#      - cloudwatchLog: '/aws/lambda/hello'
+#      - cognitoUserPool:
+#          pool: MyUserPool
+#          trigger: PreSignUp
+
+#    Define function environment variables here
+#    environment:
+#      variable2: value2
+
+# you can add CloudFormation resource templates here
+#resources:
+#  Resources:
+#    NewResource:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: my-new-bucket
+#  Outputs:
+#     NewOutput:
+#       Description: "Description for the output"
+#       Value: "Some output value"

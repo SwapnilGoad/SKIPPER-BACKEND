@@ -1,0 +1,26 @@
+{
+  "name": "authorization-service",
+  "version": "1.0.0",
+  "description": "Provides Functionality for User Management for AWS Cognito Pools for Skipper Backend Access",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SwapnilGoad/SkipperAPI.git"
+  },
+  "author": "Swapnil Goad",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SwapnilGoad/SkipperAPI/issues"
+  },
+  "homepage": "https://github.com/SwapnilGoad/SkipperAPI#readme",
+  "dependencies": {
+    "amazon-cognito-identity-js": "^2.0.2",
+    "bluebird": "^3.5.1",
+    "email-validator": "^1.1.1",
+    "ramda": "^0.25.0",
+    "uuid": "^3.2.1"
+  }
+}

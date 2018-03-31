@@ -1,0 +1,28 @@
+{
+  "body": {
+    "agency_name": "LAPD",
+    "contacts": [
+      {
+        "first_name": "Steve",
+        "middle_name": "n",
+        "last_name": "Smith",
+        "email": "steve007@gmail.com",
+        "mobile": "432-243-4050",
+        "access_status": "1"
+      },
+      {
+        "first_name": "John",
+        "middle_name": "M",
+        "last_name": "Hammond",
+        "email": "john@jurassicpark.com",
+        "mobile": "310-395-1716",
+        "access_status": ""
+      }
+    ],
+    "address": "123 St",
+    "city": "California",
+    "state": "1",
+    "zipcode": 12312,
+    "contact_number": "9090928301"
+  }
+}
