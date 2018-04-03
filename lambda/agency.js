@@ -56,7 +56,10 @@ module.exports.register = (event, context, callback) => {
             console.log("Successful Contacts:", successfullContacts);
             //response.agency.contacts = successfullContacts;
             response.messages.push("Successfully registered Agency!");
-            callback(null, successResponseBuilder(JSON.stringify(response)));
+            //response.success.push("1");
+           // callback(null, successResponseBuilder(JSON.stringify(response)));
+           //response
+            callback(null, successResponseBuilder(JSON.stringify({"agency_id":response.agency.agency_id,'success':'1'})));
             })
             .catch(err => {
                 console.error('Failed to register Agency with the system', err);
@@ -84,17 +87,231 @@ module.exports.register = (event, context, callback) => {
 
 //method: get path: /admin/agency/{id}
 module.exports.get = (event, context, callback) => {
-    //Get the details of a particular agency record code goes here
+   //Get the details of a particular agency record code goes here 
+   //callback(null, successResponseBuilder(JSON.stringify({'success':event.pathParameters.id})));
+var params = {
+    TableName: process.env.AGENCY_TABLE,
+    Key:{
+        "agency_id": event.pathParameters.id
+        
+    }
+};
+
+dynamoDb.get(params, function(error, data) {
+    if (!error) 
+    {
+        if(Object.keys(data).length > 0)
+        {
+            
+            //console.log("Agency ID to Serach:", event.agency_id);
+            var params1 = {
+                TableName: process.env.AGENCY_CONTACT_DETAIL_TABLE,
+                FilterExpression: "#agency_id = :agencyID",
+                ExpressionAttributeNames:{
+                    "#agency_id": "agency_id"
+                },
+                ExpressionAttributeValues: {
+                    ":agencyID":event.pathParameters.id
+                },
+               
+             data:data.Item
+            };
+ 
+             dynamoDb.scan(params1, function(error, data1) {
+               
+                    var contact1 = [];
+                    if(data1 !== null){
+                        for(var j=0;j<data1.Items.length;j++)
+                        {
+                           
+                            contact1.push({"agency_id":data1.Items[j].agency_id, "first_name":data1.Items[j].first_name, "middle_name":data1.Items[j].middle_name, "last_name":data1.Items[j].last_name,"mobile":data1.Items[j].mobile,"email":data1.Items[j].email,"access_status":data1.Items[j].access_status,"id":data1.Items[j].id,"type":data1.Items[j].type,"password":data1.Items[j].password});                
+                        }
+                    }
+                    //callback(null, contact1);
+                    //callback(error,{'agency_details':{"agency_name":params1.data.agency_name,"address":params1.data.address,"city":params1.data.city,"state":params1.data.state,"status":params1.data.status,"contact_number":params1.data.contact_number,"logo":params1.data.logo,"zipcode":params1.data.zipcode,"agency_id":params1.data.id,contact:contact1},'success':'1'});
+                    callback(null, successResponseBuilder(JSON.stringify({'agency_details':{"agency_name":params1.data.agency_name,"address":params1.data.address,"city":params1.data.city,"state":params1.data.state,"status":params1.data.status,"contact_number":params1.data.contact_number,"logo":params1.data.logo,"banner_images":params1.data.banner_images,"zipcode":params1.data.zipcode,"agency_id":params1.data.agency_id,contact:contact1},'success':'1'})));
+             });
+           
+
+        }else
+        {           
+           //callback(error,{'message':'Incorrect user name or password ','success':4}); 
+            callback(null, successResponseBuilder(JSON.stringify({'success':4})));
+           
+           
+        }
+    }else
+    {
+            callback(null, successResponseBuilder(JSON.stringify({'success':5,error})));
+         //callback(error);
+    }
+  
+   
+});
+
+
 };
 
 //method: get path: /admin/agencies
 module.exports.list = (event, context, callback) => {
     //Get a list of all agencies goes here
+  var params1 = { TableName: process.env.AGENCY_CONTACT_DETAIL_TABLE };
+  var length = 0;
+  var processLength=0;
+  console.log(params1);
+  dynamoDb.scan(params1, function(error, data1) {
+        console.log(params1);
+        var agency_details = [];
+        for(var j=0;j<data1.Items.length;j++){
+            if(data1.Items[j].type=='1'){
+                processLength = processLength+1;
+                const params = {
+                    TableName: process.env.AGENCY_TABLE,
+                    Key:{
+                        "agency_id": data1.Items[j].agency_id
+                    },
+                    data:data1.Items[j]
+                };
+                dynamoDb.get(params, function(err, data) {
+                    //callback(err,data);
+                    console.log("second"+data);
+                    length = length+1;
+                    agency_details.push({"agency_name":data.Item.agency_name,"address":data.Item.address,"contact_number":data.Item.contact_number,"first_name":params.data.first_name,"last_name":params.data.last_name,"mobile":params.data.mobile,"email":params.data.email,"logo":data.Item.logo,"agency_id":data.Item.agency_id});//
+                });
+            }
+        }
+        var i = setInterval(function(){
+            
+            if(length == processLength) {
+                clearInterval(i);
+               // callback(null,resultData);
+                 //callback(error,{agency_details,'success':'1'});
+                 callback(null, successResponseBuilder(JSON.stringify({agency_details,'success':'1'})));
+            }
+        }, 200);
+    });
 };
-
 //method: put path: /admin/agency/{id}
 module.exports.update = (event, context, callback) => {
     //update a particular agency record goes here
+    var body = JSON.parse(event.body);
+//callback(null, successResponseBuilder(JSON.stringify({body1})));
+
+  const params = {
+    TableName: process.env.AGENCY_TABLE,
+    Item: {
+        "agency_id":event.pathParameters.id,
+        "agency_name":body.agency_name,
+        "address":body.address,
+        "city":body.city,
+        "state":body.state,
+        "zipcode":body.zipcode,
+        "contact_number": body.contact_number,
+        "logo":body.logo,
+        "banner_images":body.banner_images,
+       // "status":1,
+        //"created_on":Date.now()
+    }
+  };
+
+dynamoDb.put(params, function(error, data) {
+    if (!error) {
+        
+    processContactDetails(params.Item,body);
+     //callback(error, params.Item);
+     
+     //callback(error,{'success':'1'});
+     callback(null, successResponseBuilder(JSON.stringify({'success':'1'})));
+     
+     
+    }else{
+            //callback(error);
+             //callback(error,{'success':'6'});
+             callback(null, successResponseBuilder(JSON.stringify({'success':'6'})));
+        
+    }
+    // callback(error, data);
+  
+   
+});
+
+var processContactDetails = function(item,event){
+    for(var i=0;i<event.contacts.length;i++){
+        console.log(event.contacts[i].first_name);
+        //var identifier1 = uuidv4();
+        var params1 = {
+            TableName: process.env.AGENCY_CONTACT_DETAIL_TABLE,
+            Item: {
+                "id":event.contacts[i].id,
+                "first_name":event.contacts[i].first_name,
+                "last_name":event.contacts[i].last_name,
+                "email":event.contacts[i].email,
+                "agency_id":item.agency_id,
+                "middle_name":event.contacts[i].middle_name,
+                "mobile":event.contacts[i].mobile,
+                "access_status":event.contacts[i].access_status,
+                "type":event.contacts[i].type,
+                "password":event.contacts[i].password
+            }
+        };
+        
+     
+      dynamoDb.put(params1, function(error, data) {
+          
+         
+       });
+    }
+}
+
+};
+
+//method post /admin/updateAgencyStatus/
+module.exports.updateAgencyStatus = (event, context, callback) => {
+    //update agency status
+    var body = JSON.parse(event.body);
+    var params1 = {
+        TableName: process.env.AGENCY_TABLE,
+        Key:{
+            "agency_id": body.agency_id
+            
+        }
+    };
+    
+    dynamoDb.get(params1, function(error, data) {
+        
+    const params = {
+        TableName: process.env.AGENCY_TABLE,
+        Item: {
+            "agency_id":body.agency_id,
+            "status":body.status,
+            "agency_name":data.Item.agency_name,
+            "address": data.Item.address,
+            "banner_images": data.Item.banner_images,
+          "city": data.Item.city,
+          "contact_number": data.Item.contact_number,
+          "logo": data.Item.logo,
+          "state": data.Item.state,
+          "zipcode":data.Item.zipcode
+        }
+      };
+    dynamoDb.put(params, function(error, data) 
+    {
+        if (!error) {
+         //callback(error,{'success':'1'});
+         callback(null, successResponseBuilder(JSON.stringify({'success':'1'})));
+         
+        }else{
+            //callback(error,{'success':'6'});
+            callback(null, successResponseBuilder(JSON.stringify({'success':'6'})));
+            
+        }
+       
+       
+    });
+    
+    });
+    
+    
 };
 
 //method post /admin/agency/{id}/contact
@@ -191,7 +408,8 @@ const contactinfo = (contact, agencyID) =>{
         mobile: contact.mobile,
         access_status: contact.access_status,
         email: contact.email,
-        type: contact.type || 1,        
+        type: contact.type,
+        password:contact.password        
     }
 };
 
@@ -231,7 +449,7 @@ const agencyResponseInfo = (agency) =>{
 
 const submitAgencyP = (agency) => {
     console.log('submitAgencyP() adding Agency info to DynamoDb table', process.env.AGENCY_TABLE);
-    if(typeof agency.agency_name !== 'string' || typeof agency.address !== 'string' || typeof agency.city !== 'string' || typeof agency.zipcode !== 'number' || agency.contact_number === null){
+    if(typeof agency.agency_name !== 'string' || typeof agency.address !== 'string' || typeof agency.city !== 'string' || typeof agency.zipcode !== 'string' || agency.contact_number === null){
           console.error('Validation Failed');
           return Promise.reject(new Error('Couldn\'t register Agency because of validation errors.'));   
     }  
